@@ -81,11 +81,17 @@ def detect_ram_gb() -> float:
             return 0.0
     if sys_plat == "win32":
         rc, out = run(["wmic", "computersystem", "get", "TotalPhysicalMemory", "/format:value"])
-        for line in out.splitlines():
-            if line.startswith("TotalPhysicalMemory="):
-                val = line.split("=", 1)[1].strip()
-                if val.isdigit():
-                    return round(int(val) / 1024**3, 1)
+        if rc == 0:
+            for line in out.splitlines():
+                if line.startswith("TotalPhysicalMemory="):
+                    val = line.split("=", 1)[1].strip()
+                    if val.isdigit():
+                        return round(int(val) / 1024**3, 1)
+        
+        # Fallback to PowerShell for newer Windows 11 builds where WMIC is deprecated
+        rc, out = run(["powershell", "-Command", "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"])
+        if rc == 0 and out.strip().isdigit():
+            return round(int(out.strip()) / 1024**3, 1)
     return 0.0
 
 
